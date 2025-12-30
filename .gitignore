@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+
+# outputs / pruebas
+*.png
+*.webp
+*.jpg
+*.jpeg
+
+# carpeta local que no debe subirse
+github/
