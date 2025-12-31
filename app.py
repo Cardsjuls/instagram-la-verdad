@@ -11,9 +11,23 @@ app = FastAPI()
 # Carpeta temporal válida en Windows/Linux/Docker
 BASE_DIR = tempfile.gettempdir()
 
-# Ruta absoluta del script, para que no dependa del "cwd"
+# Ruta absoluta del script (no depende del cwd)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPT_PATH = os.path.join(SCRIPT_DIR, "degradado_hola.py")
+
+# ✅ Defaults para que SIEMPRE salga igual (misma “altura” y “tamaño”)
+OUT_SIZE = os.getenv("OUT_SIZE", "1638x2048")
+
+# Estos son los que tú vienes usando y te gustaron:
+TEXT_LINE_SPACING = os.getenv("TEXT_LINE_SPACING", "0.74")
+TEXT_START_FONT = os.getenv("TEXT_START_FONT", "0.075")
+TEXT_X_SCALE = os.getenv("TEXT_X_SCALE", "0.78")
+TEXT_MAX_WIDTH = os.getenv("TEXT_MAX_WIDTH", "0.86")
+
+# Para que el resultado sea consistente:
+TEXT_MIN_FONT = os.getenv("TEXT_MIN_FONT", "28")
+TEXT_STROKE = os.getenv("TEXT_STROKE", "6")
+TEXT_TRACKING = os.getenv("TEXT_TRACKING", "-0.015")
 
 
 def safe_delete(path: str) -> None:
@@ -37,7 +51,7 @@ async def render_image(
 ):
     uid = str(uuid.uuid4())
 
-    # Mantén la extensión real (por ejemplo .webp) para que PIL la detecte bien
+    # Mantener extensión real para que PIL detecte bien
     ext = os.path.splitext(image.filename or "")[1].lower()
     if ext not in [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"]:
         ext = ".png"
@@ -50,24 +64,35 @@ async def render_image(
         with open(input_path, "wb") as f:
             f.write(await image.read())
 
-        # Comando que tu script sí entiende
+        # ✅ OJO: aquí SOLO flags que EXISTEN en degradado_hola.py
         cmd = [
             sys.executable,
             SCRIPT_PATH,
             input_path,
             output_path,
-            "--out-size", "1638x2048",
+
+            "--out-size", OUT_SIZE,
             "--text", text,
-            "--text-line-spacing", "0.74",
-            "--text-start-font", "0.135",
-            "--text-x-scale", "0.78",
-            "--text-max-width", "0.86"
+
+            "--text-line-spacing", TEXT_LINE_SPACING,
+            "--text-start-font", TEXT_START_FONT,
+            "--text-x-scale", TEXT_X_SCALE,
+            "--text-max-width", TEXT_MAX_WIDTH,
+
+            "--text-min-font", TEXT_MIN_FONT,
+            "--text-stroke", TEXT_STROKE,
+            "--text-tracking", TEXT_TRACKING,
         ]
 
-        subprocess.run(cmd, check=True)
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode != 0:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Render failed (exit {r.returncode}). STDERR: {r.stderr[-1500:]}"
+            )
 
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"Render failed (exit code {e.returncode}).")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

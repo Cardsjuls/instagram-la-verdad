@@ -5,30 +5,32 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 def find_font(font_size: int) -> ImageFont.FreeTypeFont:
     candidates = [
-        # Linux
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        # Windows
         "C:\\Windows\\Fonts\\arialbd.ttf",
         "C:\\Windows\\Fonts\\arial.ttf",
-        # macOS
         "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
         "/System/Library/Fonts/Supplemental/Arial.ttf",
         "/Library/Fonts/Arial Bold.ttf",
         "/Library/Fonts/Arial.ttf",
-        # Fallback names
+        "DejaVuSansCondensed-Bold.ttf",
         "DejaVuSans-Bold.ttf",
         "DejaVuSans.ttf",
         "arialbd.ttf",
         "arial.ttf",
     ]
+
     for path in candidates:
         try:
             if os.path.exists(path) or (":" not in path and "/" not in path):
                 return ImageFont.truetype(path, font_size)
         except Exception:
             pass
+
     return ImageFont.load_default()
+
+
 
 
 def _parse_rgb(s: str) -> tuple[int, int, int]:
