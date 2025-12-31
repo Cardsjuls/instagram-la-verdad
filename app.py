@@ -15,20 +15,8 @@ BASE_DIR = tempfile.gettempdir()
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPT_PATH = os.path.join(SCRIPT_DIR, "degradado_hola.py")
 
-# === CONFIGURACIÓN DE TEXTO (constantes del render) ===
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf"
-TEXT_TOP = 560          # desde dónde empieza el bloque de texto (Y)
-TEXT_BOTTOM = 1330      # hasta dónde llega (Y)
-LINE_SPACING = 6         # interlineado en px
-MAX_FONT = 118           # tamaño máximo de fuente
-MIN_FONT = 28
-PADDING_X = 70
-PADDING_Y = 40
-STROKE_W = 6
-
 
 def safe_delete(path: str) -> None:
-    """Elimina archivos temporales de forma segura."""
     try:
         if path and os.path.exists(path):
             os.remove(path)
@@ -38,7 +26,6 @@ def safe_delete(path: str) -> None:
 
 @app.get("/")
 def root():
-    """Ruta principal de prueba."""
     return {"ok": True, "docs": "/docs", "post": "/render"}
 
 
@@ -48,7 +35,6 @@ async def render_image(
     image: UploadFile = File(...),
     text: str = Form(...)
 ):
-    """Procesa la imagen y devuelve el resultado generado por degradado_hola.py"""
     uid = str(uuid.uuid4())
 
     # Mantén la extensión real (por ejemplo .webp) para que PIL la detecte bien
@@ -64,7 +50,7 @@ async def render_image(
         with open(input_path, "wb") as f:
             f.write(await image.read())
 
-        # Comando para ejecutar el script de renderizado
+        # Comando que tu script sí entiende
         cmd = [
             sys.executable,
             SCRIPT_PATH,
@@ -72,18 +58,10 @@ async def render_image(
             output_path,
             "--out-size", "1638x2048",
             "--text", text,
-
-            # === Parámetros fijos de diseño ===
-            "--font-path", FONT_PATH,
-            "--text-line-spacing", str(LINE_SPACING),
-            "--text-top", str(TEXT_TOP),
-            "--text-bottom", str(TEXT_BOTTOM),
+            "--text-line-spacing", "0.74",
             "--text-start-font", "0.135",
             "--text-x-scale", "0.78",
-            "--text-max-width", "0.86",
-            "--max-font", str(MAX_FONT),
-            "--min-font", str(MIN_FONT),
-            "--stroke-width", str(STROKE_W)
+            "--text-max-width", "0.86"
         ]
 
         subprocess.run(cmd, check=True)
@@ -93,7 +71,7 @@ async def render_image(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    # Eliminar archivos temporales después de enviar la respuesta
+    # Borrar temporales al terminar de enviar la respuesta
     background_tasks.add_task(safe_delete, input_path)
     background_tasks.add_task(safe_delete, output_path)
 
