@@ -10,3 +10,15 @@ __pycache__/
 
 # carpeta local que no debe subirse
 github/
+
+# Include the reviewed examples and source images.
+!muestras/**/*.png
+!muestras/**/*.jpg
+!muestras/**/*.jpeg
+
+# Local environments and credentials
+.venv/
+venv/
+.env
+.env.*
+!.env.example

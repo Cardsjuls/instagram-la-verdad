@@ -16,18 +16,20 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPT_PATH = os.path.join(SCRIPT_DIR, "degradado_hola.py")
 
 # ✅ Defaults para que SIEMPRE salga igual (misma “altura” y “tamaño”)
-OUT_SIZE = os.getenv("OUT_SIZE", "1638x2048")
+OUT_SIZE = os.getenv("OUT_SIZE", "1080x1350")
 
 # Estos son los que tú vienes usando y te gustaron:
-TEXT_LINE_SPACING = os.getenv("TEXT_LINE_SPACING", "0.74")
-TEXT_START_FONT = os.getenv("TEXT_START_FONT", "0.075")
-TEXT_X_SCALE = os.getenv("TEXT_X_SCALE", "0.78")
-TEXT_MAX_WIDTH = os.getenv("TEXT_MAX_WIDTH", "0.86")
+TEXT_LINE_SPACING = os.getenv("TEXT_LINE_SPACING", "0.88")
+TEXT_START_FONT = os.getenv("TEXT_START_FONT", "0.09")
+TEXT_X_SCALE = os.getenv("TEXT_X_SCALE", "0.65")
+TEXT_MAX_WIDTH = os.getenv("TEXT_MAX_WIDTH", "0.94")
 
 # Para que el resultado sea consistente:
 TEXT_MIN_FONT = os.getenv("TEXT_MIN_FONT", "28")
-TEXT_STROKE = os.getenv("TEXT_STROKE", "6")
+TEXT_STROKE = os.getenv("TEXT_STROKE", "3")
 TEXT_TRACKING = os.getenv("TEXT_TRACKING", "-0.015")
+TEXT_TOP = os.getenv("TEXT_TOP", "0.44")
+TEXT_BOTTOM = os.getenv("TEXT_BOTTOM", "0.98")
 
 
 def safe_delete(path: str) -> None:
@@ -78,6 +80,8 @@ async def render_image(
             "--text-start-font", TEXT_START_FONT,
             "--text-x-scale", TEXT_X_SCALE,
             "--text-max-width", TEXT_MAX_WIDTH,
+            "--text-top", TEXT_TOP,
+            "--text-bottom", TEXT_BOTTOM,
 
             "--text-min-font", TEXT_MIN_FONT,
             "--text-stroke", TEXT_STROKE,

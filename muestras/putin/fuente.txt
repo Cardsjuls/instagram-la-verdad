@@ -1,0 +1,5 @@
+Articulo: https://laverdadrd.com.do/putin-acepta-reanudar-las-conversaciones-de-paz-con-ucrania/
+Foto: https://laverdadrd.com.do/wp-content/uploads/2026/10/putin.png
+Titular: Putin acepta reanudar las conversaciones de paz con Ucrania
+01: parametros predeterminados de app.py en Windows.
+02: encuadre y parametros ajustados mediante el mismo renderizador.

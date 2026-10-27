@@ -259,18 +259,55 @@ def _render_line_image(line: str, font: ImageFont.FreeTypeFont, tracking: int, s
     return layer
 
 
+
+def _fit_title_lines(draw, text, font, tracking, stroke, x_scale,
+                     line_spacing, max_width, max_height):
+    """Keep the font size; shorten overflowing titles at word boundaries."""
+    # Reserve the transparent padding and stroke used by _render_line_image.
+    wrap_width = max(1, int(max_width / x_scale) - stroke * 4)
+
+    def layout(candidate):
+        lines = _wrap_text_to_width(draw, candidate, font, tracking, wrap_width)
+        lines = [line for line in lines if line.strip()]
+        if not lines:
+            return None
+        sizes = [_measure_line_raw(draw, line, font, tracking)[:2] for line in lines]
+        heights = [height + stroke * 4 for _, height in sizes]
+        step = int(heights[0] * line_spacing)
+        height = max(i * step + h for i, h in enumerate(heights))
+        width = max(max(1, int((w + stroke * 4) * x_scale)) for w, _ in sizes)
+        return lines if width <= max_width and height <= max_height else None
+
+    full = layout(text)
+    if full is not None:
+        return full
+
+    best = layout('...')
+    if best is None:
+        raise ValueError('El area del titular es demasiado pequena para los puntos suspensivos.')
+    prefix = []
+    for word in text.split():
+        prefix.append(word)
+        candidate = ' '.join(prefix).rstrip('.,;:!?') + '...'
+        fitted = layout(candidate)
+        if fitted is None:
+            break
+        best = fitted
+    return best
+
+
 def draw_center_text(
     img: Image.Image,
     text: str,
     *,
-    max_width_ratio: float = 0.82,
-    top_ratio: float = 0.42,
-    bottom_ratio: float = 0.95,
-    x_scale: float = 0.85,
+    max_width_ratio: float = 0.94,
+    top_ratio: float = 0.44,
+    bottom_ratio: float = 0.98,
+    x_scale: float = 0.65,
     tracking_ratio: float = -0.015,
     stroke: int = 3,
     line_spacing: float = 0.88,
-    start_font_ratio: float = 0.11,
+    start_font_ratio: float = 0.09,
     min_font_size: int = 14,
 ) -> Image.Image:
     img = img.convert("RGBA")
@@ -300,45 +337,22 @@ def draw_center_text(
     dummy = Image.new("RGBA", (10, 10))
     d = ImageDraw.Draw(dummy)
 
-    best = None
-
-    for _ in range(120):
-        font = find_font(font_size)
-        tracking = int(font_size * float(tracking_ratio))
-
-        wrap_limit_raw = int(max_block_w / x_scale)
-        lines = _wrap_text_to_width(d, text, font, tracking, wrap_limit_raw)
-        lines = [ln for ln in lines if ln.strip()]
-
-        line_imgs = []
-        max_line_w = 0
-
-        for ln in lines:
-            ln_img = _render_line_image(ln, font, tracking, stroke)
-            ln_img = ln_img.resize((max(1, int(ln_img.width * x_scale)), ln_img.height), resample=Image.BICUBIC)
-            line_imgs.append(ln_img)
-            max_line_w = max(max_line_w, ln_img.width)
-
-        if not line_imgs:
-            return img
-
-        line_step = int(line_imgs[0].height * line_spacing)
-        total_h = (line_step * (len(line_imgs) - 1)) + line_imgs[0].height
-
-        fits = (max_line_w <= max_block_w) and (total_h <= max_block_h)
-        best = (font_size, line_imgs, total_h, line_step)
-
-        if fits:
-            break
-
-        font_size -= 1
-        if font_size < min_font_size:
-            break
-
-    if best is None:
-        return img
-
-    _, line_imgs, total_h, line_step = best
+    font = find_font(font_size)
+    tracking = int(font_size * float(tracking_ratio))
+    lines = _fit_title_lines(
+        d, text, font, tracking, stroke, x_scale, line_spacing,
+        max_block_w, max_block_h,
+    )
+    line_imgs = []
+    for line in lines:
+        layer = _render_line_image(line, font, tracking, stroke)
+        layer = layer.resize(
+            (max(1, int(layer.width * x_scale)), layer.height),
+            resample=Image.BICUBIC,
+        )
+        line_imgs.append(layer)
+    line_step = int(line_imgs[0].height * line_spacing)
+    total_h = max(i * line_step + layer.height for i, layer in enumerate(line_imgs))
     start_y = block_top + int((max_block_h - total_h) / 2)
 
     out = img.copy()
@@ -386,14 +400,14 @@ def main():
     parser.add_argument("--mid-pos", type=float, default=0.45, help='Posición relativa (0..1) del punto medio "1.2" dentro de la banda sólida. Default 0.45')
 
     # Texto estilo titular
-    parser.add_argument("--text-max-width", type=float, default=0.82, help="Ancho máximo del bloque de texto (0..1). Default 0.82")
-    parser.add_argument("--text-top", type=float, default=0.42, help="Inicio vertical del área del texto (0..1). Default 0.42")
-    parser.add_argument("--text-bottom", type=float, default=0.95, help="Fin vertical del área del texto (0..1). Default 0.95")
-    parser.add_argument("--text-x-scale", type=float, default=0.85, help="Compresión horizontal del texto (0.4..1). Default 0.85")
+    parser.add_argument("--text-max-width", type=float, default=0.94, help="Ancho máximo del bloque de texto (0..1). Default 0.94")
+    parser.add_argument("--text-top", type=float, default=0.44, help="Inicio vertical del área del texto (0..1). Default 0.44")
+    parser.add_argument("--text-bottom", type=float, default=0.98, help="Fin vertical del área del texto (0..1). Default 0.98")
+    parser.add_argument("--text-x-scale", type=float, default=0.65, help="Compresión horizontal del texto (0.4..1). Default 0.65")
     parser.add_argument("--text-tracking", type=float, default=-0.015, help="Tracking relativo al tamaño de fuente. Default -0.015")
     parser.add_argument("--text-stroke", type=int, default=3, help="Grosor del borde negro. Default 3")
     parser.add_argument("--text-line-spacing", type=float, default=0.88, help="Espaciado entre líneas. <1 más pegado. Default 0.88")
-    parser.add_argument("--text-start-font", type=float, default=0.11, help="Tamaño inicial relativo a la altura. Default 0.11")
+    parser.add_argument("--text-start-font", type=float, default=0.09, help="Tamano fijo relativo a la altura; si no cabe, acorta con ... Default 0.09")
     parser.add_argument("--text-min-font", type=int, default=14, help="Tamaño mínimo de fuente. Default 14")
 
     args = parser.parse_args()
